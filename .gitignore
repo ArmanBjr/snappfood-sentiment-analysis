@@ -1,0 +1,39 @@
+# Model weights (too large for git)
+saved_models/
+models/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Training logs (optional — keep CSVs, ignore raw TF logs)
+outputs/logs/events.out.tfevents.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+*.env
+venv/
+.venv/
+
+# LaTeX build artifacts
+report/*.aux
+report/*.log
+report/*.out
+report/*.synctex.gz
+report/*.toc
+report/*.fls
+report/*.fdb_latexmk
+
+# Data (kept outside repo)
+Data/
+data/
+../Data/
