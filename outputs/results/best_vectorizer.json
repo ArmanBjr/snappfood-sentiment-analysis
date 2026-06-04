@@ -1,0 +1,11 @@
+{
+  "best_vectorizer": "CountVectorizer",
+  "best_model": "RandomForest",
+  "best_model_f1": 0.8384,
+  "best_model_accuracy": 0.8386,
+  "avg_f1_per_vec": {
+    "CountVectorizer": 0.8066,
+    "Word2Vec": 0.8021,
+    "TF-IDF": 0.7946
+  }
+}

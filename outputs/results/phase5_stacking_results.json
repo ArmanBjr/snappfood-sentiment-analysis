@@ -1,0 +1,10 @@
+{
+  "stacking_accuracy": 0.8455,
+  "stacking_precision": 0.8474,
+  "stacking_recall": 0.8455,
+  "stacking_f1": 0.8453,
+  "best_single_model": "RandomForest",
+  "best_single_f1": 0.8384,
+  "delta_f1": 0.0069,
+  "vectorizer_used": "CountVectorizer"
+}
