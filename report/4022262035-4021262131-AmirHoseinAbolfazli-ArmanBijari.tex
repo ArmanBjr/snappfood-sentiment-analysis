@@ -170,12 +170,11 @@
 % =================================
 %            Sections
 % =================================
-
 \section{معرفی داده‌ها}
 
-داده‌ای که توی این پروژه باهاش کار کردیم \lr{Snapfood Persian Sentiment Analysis} هستش که از \lr{Kaggle}\footnote{\lr{Kaggle}: پلتفرم آنلاین برای مسابقات یادگیری ماشین و به اشتراک‌گذاری دیتاست.} برداشتیم. داده حدوداً \lr{70,000} تا نظر کاربرای \lr{Snapfood} داره که کاربرا بعد از سفارش غذا نوشتن. هر نظر یه برچسب داره: یا \lr{HAPPY} (مثبت) یا \lr{SAD} (منفی). خوبی این داده اینه که کاملاً متوازنه، یعنی تعداد نظرات مثبت و منفی تقریباً \lr{35,000} تا \lr{35,000} تاست و مشکل عدم توازن کلاس نداریم.
+داده‌ای که توی این پروژه باهاش کار کردیم \lr{Snapfood Persian Sentiment Analysis} هستش که از \lr{Kaggle}\footnote{\lr{Kaggle}: پلتفرم آنلاین برای مسابقات یادگیری ماشین و به اشتراک‌گذاری دیتاست.} برداشتیم. داده \lr{70,000} تا نظر کاربرای \lr{Snapfood} داره که بعد از سفارش غذا نوشتن. هر نظر یه برچسب داره: \lr{HAPPY} (مثبت) یا \lr{SAD} (منفی). بعد از فیلتر اولیه \lr{69,480} ردیف مونده (\lr{HAPPY}: \lr{34,916} / \lr{SAD}: \lr{34,564}) و بعد از پاکسازی \lr{69,479} ردیف (\lr{1} نظر خالی حذف شد). از نظر تعداد کلاس متوازنه.
 
-یه چیزی که داده رو جالب و در عین حال چالش‌برانگیز می‌کنه اینه که نظرات کاملاً واقعی و عامیانه‌ان. یعنی کاربرا غلط نگارشی دارن، بعضیا حروف رو کِشیدن مثل «عاااالی» که بخوان تأکید کنن، بعضیا \lr{emoji} گذاشتن، بعضیا هم کلمه فارسی و انگلیسی رو قاطی کردن. این چیزا همه نویز حساب میشن و باید قبل از هر کاری پاک بشن.
+یه چیزی که داده رو جالب و در عین حال چالش‌برانگیز می‌کنه اینه که نظرات کاملاً واقعی و عامیانه‌ان. غلط نگارشی، کشیدن حروف، \lr{emoji}، قاطی فارسی-انگلیسی، همه هست. اینا نویز حساب میشن ولی بخشی‌شون خودش سیگنال احساسه.
 
 \begin{figure}[H]
     \centering
@@ -186,26 +185,19 @@
 
 پس داده خوبیه، ولی چون عامیانه و غیررسمیه، پیش‌پردازش درست خیلی مهمه.
 
+یه چیز دیگه که توی ارزیابی مدل خیلی اثر میذاره اینه که برچسب‌ها همیشه تمیز نیستن. حدود \lr{22\%} نظرها «ولی» یا «اما» دارن؛ حدود \lr{6\%} همزمان کلمات مثبت و منفی دارن. برای انسان قابل فهمه، ولی برای مدلی که فقط یه برچسب \lr{HAPPY}/\lr{SAD} می‌بینه گیج‌کننده‌ست. پس سقف دقت فقط با مدل بهتر بالا نمیره، بخشی‌ش سقف ذاتی برچسب‌گذاریه.
+
 
 \section{فاز اول: پیش‌پردازش متن}
 
 \subsection{چرا فارسی سخت‌تره؟}
 
-یه مشکل خاص که فارسی داره اینه که بعضی حروفش با عربی کُد یونیکد مشترک ندارن ولی عین هم به نظر میان. مثلاً «ی» فارسی کدش \lr{U+06CC} هستش ولی «ي» عربی کدش \lr{U+064A} هستش. از نظر بصری فرقی نداری ولی وقتی مدل می‌خواد یه \lr{vocabulary}\footnote{\lr{vocabulary}: مجموعه همه کلمات منحصربه‌فردی که مدل باهاشون آشناست و می‌تونه بردار بسازه.} بسازه، این دوتا رو دوتا کلمه جدا می‌بینه. پس کلمه «می‌خوام» که یه بار با «ی» فارسی نوشته شده و یه بار با «ي» عربی، از دید مدل دو چیز کاملاً مجزاست. به خاطر همین نرمال‌سازی اول از همه باید انجام بشه.
+یه مشکل خاص فارسی اینه که بعضی حروف با عربی یونیکد مشترک ندارن ولی عین هم به نظر میان. «ی» فارسی \lr{U+06CC} و «ي» عربی \lr{U+064A}. از دید مدل دو کلمه جدا میشن مگر اینکه اول نرمال‌سازی کنیم.
 
 \subsection{مراحل پیش‌پردازش}
 
-کد پیش‌پردازش توی فایل \lr{\texttt{src/preprocessing.py}} نوشته شده. ترتیب مراحل مهمه چون هر مرحله پیش‌شرط مرحله بعدیه.
-
-اول از همه \lr{URL}ها رو حذف می‌کنیم. این مرحله باید \textbf{قبل از نرمال‌سازی} باشه، چون \lr{Hazm}\footnote{\lr{Hazm}: کتابخونه پایتون برای پردازش زبان طبیعی فارسی. امکانات نرمال‌سازی، توکن‌سازی، ریشه‌یابی و لیست کلمات بی‌معنی رو داره.} داخل فرایند نرمال‌سازیش کاراکتر «\lr{://}» رو حذف می‌کنه و بعدش دیگه نمیشه لینک رو تشخیص داد.
-
-بعد از اون نرمال‌سازی فارسی با \lr{\texttt{hazm.Normalizer()}} انجام می‌شه. این تابع «ي» عربی رو تبدیل می‌کنه به «ی» فارسی، «ك» عربی رو به «ک» فارسی، نیم‌فاصله‌ها رو سر و سامون میده و کلاً همه اشکال مختلف نوشتار رو یکپارچه می‌کنه. بعدش \lr{emoji}ها، اعداد و علائم نگارشی حذف میشن چون اطلاعات احساسی خاصی توشون نیست.
-
-یه مرحله‌ای که به نظرمون جالبه مرحله کاهش تکراره. الگوی \lr{\texttt{r'(.)\textbackslash1\{2,\}'}} هر حرفی که بیشتر از یه بار پشت سر هم اومده رو به یه نمونه کاهش میده، یعنی «خوووووب» میشه «خوب». نکته ظریف اینه که باید \lr{\texttt{r'\textbackslash1'}} بنویسیم، نه \lr{\texttt{r'\textbackslash1\textbackslash1'}}، وگرنه «خوووب» میشه «خووب» که هنوزم اشتباهه.
-
-بعدش توکن‌سازی با \lr{\texttt{hazm.WordTokenizer()}} انجام میشه. بعد از توکن‌سازی کلمات بی‌معنی حذف میشن، ولی اینجا یه نکته مهم هست: \lr{Hazm} به طور پیش‌فرض کلماتی مثل «خوب»، «عالی» و «بهتر» رو جزو کلمات بی‌معنی حساب کرده! برای تحلیل احساسات این فاجعه‌ست چون دقیقاً همین کلمات بار احساسی دارن. به خاطر همین یه مجموعه کلمات احساسی مهم از لیست بی‌معنی‌های \lr{Hazm} کنار گذاشتیم تا حذف نشن.
-
-آخرین مرحله هم ریشه‌یابی با \lr{\texttt{hazm.Lemmatizer()}} هستش. خروجی این تابع به شکل «ریشه‌ماضی\lr{\#}ریشه‌مضارع» میاد و ما فقط بخش اول رو نگه می‌داریم. مثلاً «خوردم»، «می‌خورم» و «خورده» همه میشن «خور».
+کد توی \lr{\texttt{src/preprocessing.py}} هست. برخلاف یه pipeline عمومی، اینجا عمداً سیگنال احساس رو نگه می‌داریم:
+اول \lr{URL} حذف میشه (قبل از \lr{Hazm}\footnote{\lr{Hazm}: کتابخونه پایتون برای پردازش زبان طبیعی فارسی.} چون نرمالایزر \lr{://} رو می‌بلعه). بعد \lr{emoji}های احساسی به \lr{EMO\_POS}/\lr{EMO\_NEG} نگاشت میشن، نه اینکه کورکورانه حذف بشن. نرمال‌سازی فارسی، حذف اعداد و علائم، جمع‌کردن حروف تکراری (خوووب $\rightarrow$ خوب)، توکن‌سازی، و مهم‌تر از همه \textbf{برچسب‌گذاری نفی}: بعد نفی‌کننده‌ها مثل «نه» به کلمات بعدی پیشوند \lr{NEG\_} می‌خوره (ایده \lr{Pang \& Lee}). حذف \lr{stopword} پیش‌فرض \textbf{خاموش}ه چون لیست \lr{Hazm} نفی‌کننده و شدت‌دهنده داره. آخر سر \lr{lemmatization} با \lr{Hazm.Lemmatizer()}؛ توکن‌های \lr{EMO\_}/\lr{NEG\_} دست نمی‌خورن.
 
 \subsection{نمونه‌هایی از قبل و بعد}
 
@@ -216,139 +208,148 @@
 \toprule
 \textbf{متن اصلی} & \textbf{بعد از پیش‌پردازش} \\
 \midrule
-غذاش خیلی خوب بود!!!\ [ایموجی قلب] & غذا خیلی خوب بود \\
+سلام خیلی خوووووب بود! غذا عالیییی بود & سلام خیلی خوب بود غذا عالی بود \\
 \addlinespace
-کیفیت اصلا خوووب نبود، خیلی بد بود & کیفیت اصلا خوب نبود خیلی بد \\
+بدترین تجربه زندگیم بود. اصلا توصیه نمیکنم & بدترین تجربه زندگیم بود اصلا توصیه کرد به هیچ کس \\
 \addlinespace
-سرعت ارسال عالییییی بود [ایموجی تأیید] & سرعت ارسال عالی \\
-\addlinespace
-یه سایت دیگه ببین: \lr{https://example.com} & یه سایت دیگه ببین \\
-\addlinespace
-غذا تازه بود و خوشمزه & غذا تازه خوشمزه \\
+غذا وقتی رسید سرد بوووووود. افتضاح & غذا وقتی رسید سرد بوود افتضاح \\
 \bottomrule
 \end{tabularx}
-\caption{نمونه‌هایی از متن قبل و بعد از پیش‌پردازش}
+\caption{نمونه‌های واقعی از نوت‌بوک فاز اول}
 \label{tab:preprocessing_examples}
 \end{table}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.65\textwidth]{../outputs/figures/token_distribution.png}
-    \caption{توزیع تعداد توکن در نظرات پس از پیش‌پردازش}
+    \caption{توزیع تعداد توکن (میانگین \lr{17}، میانه \lr{13})}
     \label{fig:token_dist}
 \end{figure}
 
 \subsection{تقسیم داده}
 
-داده رو با نسبت \lr{80} به \lr{20} تقسیم کردیم. از \lr{stratified split}\footnote{\lr{stratified split}: روش تقسیم داده‌ای که نسبت کلاس‌ها رو توی هر دو بخش آموزش و آزمون یکسان نگه میداره.} استفاده کردیم که توزیع کلاس‌ها توی هر دو بخش یکسان بمونه. \lr{56,000} تا برای آموزش، \lr{14,000} تا برای آزمون.
-
-پس بعد از پیش‌پردازش، متن‌ها نسبتاً تمیز شدن و آماده تبدیل به بردار عددی هستن.
+با \lr{stratified split}\footnote{\lr{stratified split}: نسبت کلاس‌ها توی train و test یکی بمونه.} و \lr{random\_state=42}: آموزش \lr{55,583} (\lr{HAPPY} \lr{27,933} / \lr{SAD} \lr{27,650})، آزمون \lr{13,896} (\lr{HAPPY} \lr{6,983} / \lr{SAD} \lr{6,913}). میانگین طول متن \lr{89.7} کاراکتر (میانه \lr{66}).
 
 
 \section{فاز دوم: \lr{Vectorization}}
 
-خب، حالا سوال اینه که چطور متن رو به اعداد تبدیل کنیم که مدل بتونه باهاش کار کنه؟ سه روش مختلف پیاده‌سازی کردیم که هر کدوم ایده متفاوتی دارن.
+سه روش اجباری پروژه رو پیاده کردیم، به علاوه دو نمایش bonus که توی فازهای بعدی مقایسه شدن.
 
-\subsection{\lr{CountVectorizer}}
+\subsection{\lr{CountVectorizer} و \lr{TF-IDF}}
 
-ساده‌ترین روش اینه که بشمریم هر کلمه چند بار توی هر نظر اومده. انگار یه جدول بزرگ درست می‌کنیم که سطرهاش نظرات و ستون‌هاش کلمات مختلف هستن و هر خونه تعداد تکرار اون کلمه توی اون نظر رو نگه می‌داره. بهش میگن \lr{Bag of Words}\footnote{\lr{Bag of Words}: مدل نمایش متن که فقط تعداد حضور هر کلمه رو نگه میداره و ترتیب کلمات اصلاً مهم نیست.} چون ترتیب کلمات رو نادیده می‌گیره، انگار همه کلمات رو ریختی توی یه کیسه.
-
-تنظیماتی که انتخاب کردیم: حداکثر \lr{50,000} ویژگی، \lr{bigram}\footnote{\lr{bigram}: جفت کلمات مجاور که به عنوان یه ویژگی واحد در نظر گرفته میشن. مثلاً «نه خوب» یه \lr{bigram}ه. در مقابل، کلمات منفرد رو \lr{unigram} میگن.} هم فعال کردیم یعنی علاوه بر کلمات منفرد، جفت کلمات مجاور هم به عنوان ویژگی حساب میشن. مثلاً «نه خوب» یا «اصلاً بد» به عنوان یه ویژگی واحد ثبت میشه که اطلاعات بیشتری نسبت به «نه» و «خوب» جداگانه داره. همچنین ویژگی‌هایی که توی کمتر از \lr{2} سند دیده شدن رو نادیده گرفتیم چون احتمالاً اسم خاص یا غلط نگارشی‌ان.
-
-\subsection{\lr{TF-IDF}}
-
-\lr{TF-IDF} یه قدم جلوتر از \lr{CountVectorizer} هستش. ایده‌اش اینه که یه کلمه‌ای که توی همه نظرا زیاد میاد احتمالاً اطلاعات خاصی درباره احساس نداره، در حالی که کلمه‌ای که توی یه نظر خاص زیاده ولی توی بقیه کمه، احتمالاً مهم‌تره. مثلاً کلمه «غذا» احتمالاً توی اکثر نظرا هست ولی اطلاعات احساسی خاصی نداره.
-
-فرمولش اینه که وزن هر کلمه حاصل‌ضرب \lr{TF} (فراوانی کلمه توی سند) در \lr{IDF} (لگاریتم معکوس تعداد اسناد حاوی اون کلمه) هستش. به علاوه \lr{\texttt{sublinear\_tf=True}} هم گذاشتیم که به جای تعداد خام، از لگاریتمش استفاده کنه تا کلمه‌ای که \lr{50} بار اومده خیلی بیشتر از کلمه‌ای که \lr{5} بار اومده وزن نگیره.
-
-خوبیش چیه؟ کلمات رایج و بی‌اطلاعات وزن کمتری می‌گیرن و کلمات تشخیص‌دهنده برجسته‌تر میشن. بدیش چیه؟ وقتی قبلش \lr{lemmatization}\footnote{\lr{lemmatization}: فرایند تبدیل هر کلمه به ریشه پایه‌اش. مثلاً «خوردم»، «می‌خورم» و «خورده» همه میشن «خور».} اجرا کردیم، بخشی از این مزیت از قبل انجام شده.
+هر دو sparse با \lr{max\_features=50,000}، \lr{ngram\_range=(1,2)}، \lr{min\_df=2}. \lr{TF-IDF} با \lr{sublinear\_tf=True}. هر دو ماتریس \lr{50,000} بعدی با پراکندگی \lr{99.9466\%} ساختن.
 
 \subsection{\lr{Word2Vec}}
 
-\lr{Word2Vec} یه شبکه عصبی ساده‌ست که یاد می‌گیره هر کلمه رو با یه بردار چگال \lr{100} بُعدی نمایش بده، به طوری که کلمات با معنی مشابه توی فضا به هم نزدیک باشن. انگار داری به هر کلمه یه آدرس \lr{100} بُعدی میدی.
+\lr{Skip-gram}، \lr{vector\_size=100}، آموزش از صفر روی کورپوس. میانگین بردار کلمات برای هر سند. \lr{OOV} روی train حدود \lr{53.9\%} — برای نظرات کوتاه و عامیانه طبیعیه.
 
-مدل رو کاملاً از صفر روی کورپوس خودمون آموزش دادیم، بدون هیچ وزن از‌پیش‌آموزش‌دیده‌ای. معماری \lr{Skip-gram}\footnote{\lr{Skip-gram}: یکی از دو معماری اصلی \lr{Word2Vec}. از یه کلمه یاد میگیره کلمات اطرافش رو پیش‌بینی کنه. در مقابل \lr{CBOW} هستش که از کلمات اطراف، کلمه وسط رو پیش‌بینی میکنه.} انتخاب کردیم که برای کورپوس‌های کوچک‌تر معمولاً بهتر جواب میده. برای تبدیل سند به بردار هم میانگین بردار همه کلماتش رو حساب کردیم.
+\subsection{نمایش‌های bonus}
 
-بدیش اینه که با میانگین‌گیری ترتیب کلمات و وزنشون از دست میره. مثلاً «خوب نبود» و «نبود خوب» بردار یکسانی میدن. خوبیش اینه که کلمات مشابه معنایی به هم نزدیکن و مدل معناشناسی یاد گرفته.
+\lr{Word2Vec-IDF}: میانگین وزن‌دار با \lr{IDF} (ایده شبیه \lr{SIF}). \lr{Hybrid word+char TF-IDF}: اتحاد \lr{word} و \lr{char\_wb} n-gram؛ \lr{101,119} بعد با پراکندگی \lr{99.7875\%}. برای املای غلط و کشیدگی فارسی خیلی کمک می‌کنه.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{نمایش} & \textbf{بعد} & \textbf{نوع} & \textbf{پراکندگی} \\
+\midrule
+\lr{CountVectorizer} & \lr{50,000} & sparse & \lr{99.9466\%} \\
+\lr{TF-IDF} & \lr{50,000} & sparse & \lr{99.9466\%} \\
+\lr{Word2Vec (mean)} & \lr{100} & dense & --- \\
+\lr{Word2Vec-IDF} & \lr{100} & dense & --- \\
+\lr{Hybrid} & \lr{101,119} & sparse & \lr{99.7875\%} \\
+\bottomrule
+\end{tabular}
+\caption{خلاصه نمایش‌های عددی}
+\label{tab:vec_summary}
+\end{table}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.7\textwidth]{../outputs/figures/vectorizer_norms.png}
-    \caption{توزیع نُرم بردارها در سه \lr{vectorizer}}
+    \caption{توزیع نُرم بردارها}
     \label{fig:vec_norms}
 \end{figure}
-
-پس سه روش داریم با سه دیدگاه متفاوت: \lr{CountVectorizer} فرکانس خام رو نگه میداره، \lr{TF-IDF} کلمات مهم‌تر رو برجسته می‌کنه، و \lr{Word2Vec} معنا رو یاد می‌گیره.
 
 
 \section{فاز سوم: آموزش و ارزیابی مدل‌های پایه}
 
-\subsection{مدل‌ها و تنظیماتشون}
+\subsection{مدل‌ها و تنظیمات}
 
-شش تا مدل کلاسیک رو روی هر سه \lr{vectorizer} آزمایش کردیم. یه نکته فنی مهم قبل از نتایج: \lr{MultinomialNB} و \lr{ComplementNB}\footnote{\lr{ComplementNB}: نوع بهینه‌شده‌ای از \lr{Naive Bayes} که برای طبقه‌بندی متن طراحی شده. به جای اینکه احتمال یه کلاس رو حساب کنه، احتمال مکملش رو حساب میکنه و توی عمل روی متن‌های نامتوازن بهتر جواب میده.} با مقادیر منفی کنار نمیان، پس برای ویژگی‌های \lr{Word2Vec} که ممکنه منفی باشن از \lr{GaussianNB} استفاده کردیم. همچنین \lr{LinearSVC} خودش \lr{predict\_proba}\footnote{\lr{predict\_proba}: متدی در \lr{scikit-learn} که به جای فقط برچسب کلاس، احتمال تعلق به هر کلاس رو برمیگردونه. \lr{StackingClassifier} به این احتمالات نیاز داره تا ورودی متا-مدل رو بسازه.} نداره ولی برای \lr{Stacking} بهش نیاز داریم، پس اون رو داخل \lr{CalibratedClassifierCV}\footnote{\lr{CalibratedClassifierCV}: یه \lr{wrapper} در \lr{scikit-learn} که دور یه مدل میپیچه و بهش قابلیت تولید احتمالات کالیبره‌شده میده، حتی اگه مدل خودش \lr{predict\_proba} نداشته باشه.} گذاشتیم.
-
-تنظیمات هر مدل رو توی جدول زیر آوردیم:
+\lr{9} مدل کلاسیک روی پنج \lr{vectorizer} (سه اجباری + دو bonus): \lr{ComplementNB}، \lr{GaussianNB}، \lr{SVM (Linear)} داخل \lr{CalibratedClassifierCV}، \lr{LogisticRegression}، \lr{DecisionTree}، \lr{RandomForest}، \lr{KNN}، \lr{AdaBoost}، \lr{HistGradientBoosting}. \lr{ComplementNB} فقط روی sparse غیرمنفی؛ \lr{GaussianNB} روی \lr{Word2Vec}؛ \lr{HistGradBoost} روی dense. جمعاً \lr{32} آزمایش در sweep اولیه، بعد \lr{GridSearchCV} برای سه مدل خطی/NB برتر.
 
 \begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{l X}
 \toprule
-\textbf{مدل} & \textbf{تنظیمات اصلی} \\
+\textbf{مدل} & \textbf{تنظیمات sweep} \\
 \midrule
 \lr{ComplementNB / GaussianNB} & \lr{alpha=0.1} \\
-\addlinespace
-\lr{SVM (Linear)} & \lr{C=1.0, max\_iter=1000} داخل \lr{CalibratedClassifierCV} \\
-\addlinespace
-\lr{Decision Tree} & \lr{max\_depth=20, min\_samples\_leaf=5} \\
-\addlinespace
-\lr{Random Forest} & \lr{n\_estimators=200, max\_depth=30, n\_jobs=-1} \\
-\addlinespace
+\lr{SVM (Linear)} & \lr{C=1.0, max\_iter=4000} در \lr{CalibratedClassifierCV} \\
+\lr{LogisticRegression} & \lr{C=1.0, solver=lbfgs} \\
+\lr{Random Forest} & \lr{n\_estimators=200} \\
+\lr{HistGradientBoosting} & \lr{max\_iter=400} (فقط dense) \\
 \lr{KNN} & \lr{n\_neighbors=7, metric=cosine} \\
-\addlinespace
-\lr{AdaBoost} & \lr{n\_estimators=100, learning\_rate=1.0} \\
 \bottomrule
 \end{tabularx}
-\caption{مدل‌های پایه و تنظیماتشون}
+\caption{مدل‌های پایه}
 \label{tab:model_configs}
 \end{table}
 
 \subsection{نتایج کامل}
 
+جدول زیر همه \lr{32} ترکیب (شامل سه مدل tune‌شده در انتها) رو بر اساس \lr{F1} مرتب کرده:
+
 \begin{table}[H]
 \centering
-\small
+\scriptsize
 \begin{tabular}{llcccc}
 \toprule
 \textbf{مدل} & \textbf{\lr{Vectorizer}} & \textbf{دقت} & \textbf{صحت} & \textbf{فراخوانی} & \textbf{\lr{F1}} \\
 \midrule
-\lr{RandomForest}   & \lr{CountVectorizer} & \lr{0.8386} & \lr{0.8404} & \lr{0.8386} & \lr{0.8384} \\
-\lr{RandomForest}   & \lr{TF-IDF}          & \lr{0.8381} & \lr{0.8422} & \lr{0.8381} & \lr{0.8376} \\
-\lr{ComplementNB}   & \lr{CountVectorizer} & \lr{0.8363} & \lr{0.8406} & \lr{0.8363} & \lr{0.8358} \\
-\lr{SVM (Linear)}   & \lr{TF-IDF}          & \lr{0.8315} & \lr{0.8334} & \lr{0.8315} & \lr{0.8313} \\
-\lr{SVM (Linear)}   & \lr{Word2Vec}        & \lr{0.8304} & \lr{0.8337} & \lr{0.8304} & \lr{0.8301} \\
-\lr{ComplementNB}   & \lr{TF-IDF}          & \lr{0.8304} & \lr{0.8358} & \lr{0.8304} & \lr{0.8298} \\
-\lr{RandomForest}   & \lr{Word2Vec}        & \lr{0.8257} & \lr{0.8325} & \lr{0.8257} & \lr{0.8249} \\
-\lr{SVM (Linear)}   & \lr{CountVectorizer} & \lr{0.8154} & \lr{0.8159} & \lr{0.8154} & \lr{0.8153} \\
-\lr{AdaBoost}       & \lr{Word2Vec}        & \lr{0.8117} & \lr{0.8135} & \lr{0.8117} & \lr{0.8115} \\
-\lr{KNN}            & \lr{Word2Vec}        & \lr{0.8096} & \lr{0.8161} & \lr{0.8096} & \lr{0.8087} \\
-\lr{GaussianNB}     & \lr{Word2Vec}        & \lr{0.7994} & \lr{0.8222} & \lr{0.7994} & \lr{0.7960} \\
-\lr{AdaBoost}       & \lr{TF-IDF}          & \lr{0.7984} & \lr{0.8139} & \lr{0.7984} & \lr{0.7961} \\
-\lr{AdaBoost}       & \lr{CountVectorizer} & \lr{0.7975} & \lr{0.8117} & \lr{0.7975} & \lr{0.7953} \\
-\lr{DecisionTree}   & \lr{CountVectorizer} & \lr{0.7968} & \lr{0.8069} & \lr{0.7968} & \lr{0.7952} \\
-\lr{DecisionTree}   & \lr{TF-IDF}          & \lr{0.7967} & \lr{0.8100} & \lr{0.7967} & \lr{0.7946} \\
-\lr{KNN}            & \lr{CountVectorizer} & \lr{0.7612} & \lr{0.7682} & \lr{0.7612} & \lr{0.7595} \\
-\lr{DecisionTree}   & \lr{Word2Vec}        & \lr{0.7415} & \lr{0.7417} & \lr{0.7415} & \lr{0.7415} \\
-\lr{KNN}            & \lr{TF-IDF}          & \lr{0.6895} & \lr{0.7191} & \lr{0.6895} & \lr{0.6782} \\
+\lr{SVM\_(Linear)\_(tuned)} & \lr{Hybrid} & \lr{0.8578} & \lr{0.8620} & \lr{0.8578} & \lr{0.8574} \\
+\lr{LogisticReg\_(tuned)} & \lr{Hybrid} & \lr{0.8569} & \lr{0.8602} & \lr{0.8569} & \lr{0.8566} \\
+\lr{LogisticReg} & \lr{Hybrid} & \lr{0.8565} & \lr{0.8589} & \lr{0.8565} & \lr{0.8563} \\
+\lr{LogisticReg} & \lr{TF-IDF} & \lr{0.8554} & \lr{0.8590} & \lr{0.8554} & \lr{0.8551} \\
+\lr{ComplementNB\_(tuned)} & \lr{CountVectorizer} & \lr{0.8505} & \lr{0.8545} & \lr{0.8505} & \lr{0.8501} \\
+\lr{ComplementNB} & \lr{CountVectorizer} & \lr{0.8491} & \lr{0.8534} & \lr{0.8491} & \lr{0.8487} \\
+\lr{RandomForest} & \lr{CountVectorizer} & \lr{0.8487} & \lr{0.8530} & \lr{0.8487} & \lr{0.8483} \\
+\lr{SVM\_(Linear)} & \lr{Hybrid} & \lr{0.8464} & \lr{0.8480} & \lr{0.8464} & \lr{0.8463} \\
+\lr{ComplementNB} & \lr{TF-IDF} & \lr{0.8462} & \lr{0.8525} & \lr{0.8462} & \lr{0.8456} \\
+\lr{SVM\_(Linear)} & \lr{TF-IDF} & \lr{0.8449} & \lr{0.8467} & \lr{0.8449} & \lr{0.8448} \\
+\lr{RandomForest} & \lr{TF-IDF} & \lr{0.8446} & \lr{0.8503} & \lr{0.8446} & \lr{0.8440} \\
+\lr{LogisticReg} & \lr{CountVectorizer} & \lr{0.8429} & \lr{0.8436} & \lr{0.8429} & \lr{0.8428} \\
+\lr{ComplementNB} & \lr{Hybrid} & \lr{0.8416} & \lr{0.8489} & \lr{0.8416} & \lr{0.8408} \\
+\lr{LogisticReg} & \lr{Word2Vec} & \lr{0.8397} & \lr{0.8427} & \lr{0.8397} & \lr{0.8394} \\
+\lr{SVM\_(Linear)} & \lr{Word2Vec} & \lr{0.8392} & \lr{0.8421} & \lr{0.8392} & \lr{0.8389} \\
+\lr{HistGradBoost} & \lr{Word2Vec} & \lr{0.8381} & \lr{0.8417} & \lr{0.8381} & \lr{0.8377} \\
+\lr{RandomForest} & \lr{Word2Vec} & \lr{0.8344} & \lr{0.8419} & \lr{0.8344} & \lr{0.8336} \\
+\lr{SVM\_(Linear)} & \lr{Word2Vec-IDF} & \lr{0.8315} & \lr{0.8344} & \lr{0.8315} & \lr{0.8312} \\
+\lr{LogisticReg} & \lr{Word2Vec-IDF} & \lr{0.8315} & \lr{0.8345} & \lr{0.8315} & \lr{0.8311} \\
+\lr{HistGradBoost} & \lr{Word2Vec-IDF} & \lr{0.8285} & \lr{0.8318} & \lr{0.8285} & \lr{0.8281} \\
+\lr{SVM\_(Linear)} & \lr{CountVectorizer} & \lr{0.8267} & \lr{0.8272} & \lr{0.8267} & \lr{0.8267} \\
+\lr{AdaBoost} & \lr{Word2Vec} & \lr{0.8217} & \lr{0.8244} & \lr{0.8217} & \lr{0.8214} \\
+\lr{KNN} & \lr{Word2Vec} & \lr{0.8185} & \lr{0.8227} & \lr{0.8185} & \lr{0.8180} \\
+\lr{AdaBoost} & \lr{CountVectorizer} & \lr{0.8051} & \lr{0.8200} & \lr{0.8051} & \lr{0.8030} \\
+\lr{GaussianNB} & \lr{Word2Vec} & \lr{0.8020} & \lr{0.8251} & \lr{0.8020} & \lr{0.7985} \\
+\lr{KNN} & \lr{TF-IDF} & \lr{0.7979} & \lr{0.7999} & \lr{0.7979} & \lr{0.7976} \\
+\lr{DecisionTree} & \lr{TF-IDF} & \lr{0.7988} & \lr{0.8148} & \lr{0.7988} & \lr{0.7963} \\
+\lr{DecisionTree} & \lr{CountVectorizer} & \lr{0.7962} & \lr{0.8074} & \lr{0.7962} & \lr{0.7945} \\
+\lr{AdaBoost} & \lr{TF-IDF} & \lr{0.7957} & \lr{0.8167} & \lr{0.7957} & \lr{0.7924} \\
+\lr{GaussianNB} & \lr{Word2Vec-IDF} & \lr{0.7855} & \lr{0.8088} & \lr{0.7855} & \lr{0.7816} \\
+\lr{KNN} & \lr{CountVectorizer} & \lr{0.7686} & \lr{0.7752} & \lr{0.7686} & \lr{0.7671} \\
+\lr{DecisionTree} & \lr{Word2Vec} & \lr{0.7475} & \lr{0.7476} & \lr{0.7475} & \lr{0.7475} \\
 \bottomrule
 \end{tabular}
-\caption{نتایج کامل \lr{18} آزمایش، مرتب‌شده بر اساس \lr{F1}}
+\caption{نتایج کامل \lr{32} آزمایش}
 \label{tab:full_results}
 \end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{../outputs/figures/all_confusion_matrices.png}
+    \includegraphics[width=0.5\textwidth]{../outputs/figures/all_confusion_matrices.png}
     \caption{ماتریس درهم‌ریختگی همه مدل‌ها}
     \label{fig:all_cms}
 \end{figure}
@@ -356,47 +357,46 @@
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../outputs/figures/phase3_f1_comparison.png}
-    \caption{مقایسه \lr{F1} مدل‌ها روی سه \lr{vectorizer}}
+    \caption{مقایسه \lr{F1} روی پنج \lr{vectorizer}}
     \label{fig:f1_comparison}
 \end{figure}
 
 \subsection{تحلیل نتایج}
 
-بهترین مدل \lr{Random Forest} با \lr{CountVectorizer} شد با \lr{F1} برابر \lr{0.8384}. جالبه که \lr{ComplementNB} هم خیلی خوب جواب داد، \lr{F1} برابر \lr{0.8358}. درواقع برای داده‌های کیسه‌ای، فرضیه \lr{Naive Bayes}\footnote{\lr{Naive Bayes independence assumption}: فرض می‌کنه حضور هر کلمه توی یه سند مستقل از بقیه کلماته. واقعاً درست نیست ولی توی عمل نتایج قابل قبولی میده.} آن‌قدرها هم بد نیست.
+بهترین ترکیب بعد از \lr{GridSearchCV}: \lr{SVM (Linear) (tuned)} روی \lr{Hybrid} با \lr{F1=0.8574} و دقت \lr{0.8578}. \lr{LogisticRegression} روی \lr{Hybrid} و \lr{TF-IDF} هم نزدیک (\lr{0.8563} و \lr{0.8551}). \lr{Random Forest} دیگه برنده نیست؛ روی sparseهای پُربُعد، مدل‌های خطی با \lr{C} درست قوی‌ترن.
 
-بدترین نتیجه رو \lr{KNN} با \lr{TF-IDF} گرفت، \lr{F1} برابر \lr{0.6782}. دلیلش اینه که فضای ویژگی \lr{TF-IDF} خیلی \lr{high-dimensional} و \lr{sparse}\footnote{\lr{high-dimensional}: بردار خیلی بُعد زیادی داره (اینجا \lr{50,000} بُعد). \lr{sparse}: از اون \lr{50,000} خونه فقط \lr{20}–\lr{30} تاشون مقدار غیرصفر دارن و بقیه همه صفرن.} هستش و توی این فضا مسئله معروف «نفرین ابعاد» پیش میاد: فاصله‌ها بی‌معنی میشن و \lr{KNN} دیگه نمیتونه همسایه‌های واقعی رو پیدا کنه.
+بدترین‌ها همچنان \lr{DecisionTree} روی \lr{Word2Vec} (\lr{F1=0.7475}) و \lr{KNN} روی sparse (\lr{0.7671} روی \lr{CountVectorizer}). \lr{KNN} توی فضای \lr{50k}-بعدی sparse گم میشه.
 
-درخت تصمیم هم نتایج متوسطی داشت چون نمیتونه مرزهای تصمیم‌گیری پیچیده فضاهای پُربُعد رو درست مدل کنه. \lr{SVM} هم برخلاف انتظار در بعضی جاها ضعیف بود؛ احتمالاً به این دلیل که بعد از \lr{lemmatization} فضای ویژگی یکنواخت‌تر شده و مزیت \lr{SVM} در جداسازی خطی کمتر محسوس شده.
+\subsection{تنظیم ابرپارامتر و ablation پیش‌پردازش}
 
-\subsection{نمونه‌هایی از پیش‌بینی‌های درست و اشتباه}
+\lr{GridSearchCV} با \lr{5}-fold: \lr{ComplementNB} \lr{alpha=1.0} روی \lr{CountVectorizer} (\lr{F1=0.8501})؛ \lr{SVM} \lr{C=0.05} روی \lr{Hybrid} (\lr{0.8574})؛ \lr{LogisticReg} \lr{C=0.5} (\lr{0.8566}).
+
+روی زیرنمونه \lr{15k/5k}، حذف \lr{lemmatization} (\lr{F1=0.8572}) از pipeline فعلی (\lr{0.8512}) جلو بود، ولی pipeline فعلی رو نگه داشتیم چون ablation کوچک بود و negation/emoji-mapping عمداً برای احساس طراحی شده.
+
+\subsection{نمونه پیش‌بینی‌های اشتباه (بهترین مدل sweep)}
 
 \begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{X c c}
 \toprule
-\textbf{متن (پس از پیش‌پردازش)} & \textbf{واقعی} & \textbf{پیش‌بینی} \\
+\textbf{متن} & \textbf{برچسب} & \textbf{پیش‌بینی} \\
 \midrule
-غذا تازه خوشمزه سرعت عالی & مثبت & مثبت \lr{\ding{51}} \\
-بسته‌بندی افتضاح غذا سرد رسید & منفی & منفی \lr{\ding{51}} \\
-غذا خوب بود ولی تأخیر داشت & مثبت & منفی \lr{\ding{55}} \\
-قیمت مناسب کیفیت متوسط & منفی & مثبت \lr{\ding{55}} \\
+کیفیت خوب بود ولی نسبت به قیمت حجم غذا خوب بود & \lr{SAD} & \lr{HAPPY} \\
+هسته زردآلو خیلی بد بود ولی برگه هلو خوب بود & \lr{SAD} & \lr{HAPPY} \\
+سالاد سزار کاهو موند رنگ عوض شد سیب‌زمینی ساده خوب بود & \lr{HAPPY} & \lr{SAD} \\
 \bottomrule
 \end{tabularx}
-\caption{نمونه‌هایی از پیش‌بینی‌های درست و اشتباه بهترین مدل}
+\caption{خطاهای \lr{LogisticReg + Hybrid} — الگوی «ولی»}
 \label{tab:prediction_examples}
 \end{table}
 
-موارد اشتباه نشون میده که مدل روی نظرات \textbf{مبهم} ضعیف‌تره، یعنی جاهایی که هم نکته مثبت داره هم منفی. کیسه کلمات نمیتونه «خوب بود ولی تأخیر داشت» رو از «خوب بود» تمیز بده چون ترتیب و ساختار جمله رو نمیبینه.
-
-پس در نهایت از \lr{18} آزمایش، \lr{Random Forest} با \lr{CountVectorizer} برنده شد.
+پس برنده sweep اولیه \lr{LogisticReg + Hybrid} بود (\lr{0.8563})؛ بعد از tune، \lr{SVM + Hybrid} به \lr{0.8574} رسید.
 
 
 \section{فاز چهارم: انتخاب بهترین \lr{Vectorizer}}
 
-\subsection{مقایسه میانگین عملکرد}
-
-برای انتخاب بهترین \lr{vectorizer}، میانگین معیارها رو روی همه مدل‌ها حساب کردیم تا یه تصویر کلی‌تر داشته باشیم:
+\subsection{میانگین و اوج عملکرد}
 
 \begin{table}[H]
 \centering
@@ -404,47 +404,60 @@
 \toprule
 \textbf{\lr{Vectorizer}} & \textbf{دقت} & \textbf{صحت} & \textbf{فراخوانی} & \textbf{\lr{F1}} \\
 \midrule
-\lr{CountVectorizer} & \lr{0.8076} & \lr{0.8140} & \lr{0.8076} & \lr{0.8066} \\
-\lr{Word2Vec}         & \lr{0.8030} & \lr{0.8100} & \lr{0.8030} & \lr{0.8021} \\
-\lr{TF-IDF}           & \lr{0.7974} & \lr{0.8091} & \lr{0.7974} & \lr{0.7946} \\
+\lr{Hybrid} & \lr{0.8518} & \lr{0.8556} & \lr{0.8518} & \lr{0.8515} \\
+\lr{TF-IDF} & \lr{0.8262} & \lr{0.8343} & \lr{0.8262} & \lr{0.8251} \\
+\lr{CountVectorizer} & \lr{0.8235} & \lr{0.8293} & \lr{0.8235} & \lr{0.8226} \\
+\lr{Word2Vec-IDF} & \lr{0.8193} & \lr{0.8274} & \lr{0.8193} & \lr{0.8180} \\
+\lr{Word2Vec} & \lr{0.8176} & \lr{0.8235} & \lr{0.8176} & \lr{0.8169} \\
 \bottomrule
 \end{tabular}
-\caption{میانگین معیارها برای هر \lr{vectorizer} (روی همه مدل‌ها)}
+\caption{میانگین \lr{F1} روی همه مدل‌های هر \lr{vectorizer}}
 \label{tab:vec_avg}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{\lr{Vectorizer}} & \textbf{اوج \lr{F1}} \\
+\midrule
+\lr{Hybrid} & \lr{0.8574} \\
+\lr{TF-IDF} & \lr{0.8551} \\
+\lr{CountVectorizer} & \lr{0.8501} \\
+\lr{Word2Vec} & \lr{0.8394} \\
+\lr{Word2Vec-IDF} & \lr{0.8312} \\
+\bottomrule
+\end{tabular}
+\caption{بالاترین \lr{F1} هر نمایش (بعد از tune)}
+\label{tab:peak_f1}
 \end{table}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth]{../outputs/figures/avg_metrics_per_vectorizer.png}
-    \caption{مقایسه میانگین معیارها در سه \lr{vectorizer}}
+    \caption{میانگین معیارها}
     \label{fig:vec_avg}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth]{../outputs/figures/f1_heatmap.png}
-    \caption{هیت‌مپ \lr{F1} برای ترکیب مدل و \lr{vectorizer}}
+    \caption{هیت‌مپ \lr{F1}}
     \label{fig:f1_heatmap}
 \end{figure}
 
-\subsection{چرا \lr{CountVectorizer} بهتر از \lr{TF-IDF} شد؟}
+\subsection{چرا \lr{Hybrid} انتخاب شد؟}
 
-راستش این نتیجه کمی غیرمنتظره بود چون معمولاً \lr{TF-IDF} توی طبقه‌بندی متن بهتره. ولی یه توضیح محتمل اینه که \lr{lemmatization} قبلاً بخشی از کار \lr{TF-IDF} رو انجام داده. وقتی «خوردم»، «می‌خورم» و «خورده» همه تبدیل میشن به «خور»، فرکانس ریشه‌ها یکنواخت‌تر میشه و دیگه کلمات رایج اون‌قدر پرتکرار نیستن که وزن‌شون رو کم کنیم. در واقع \lr{CountVectorizer} با این فرکانس‌های نسبتاً یکسان‌شده، اطلاعات بیشتری برای مدل‌های درختی مثل \lr{Random Forest} حفظ می‌کنه.
+\lr{Hybrid} هم میانگین (\lr{0.8515}) هم اوج (\lr{0.8574}) رو برد. char n-gram املای غلط و پسوند فارسی رو می‌گیره؛ word TF-IDF هم عبارت‌هایی مثل \lr{NEG\_خوب} رو نگه می‌داره. بین سه روش \textbf{اجباری}، \lr{TF-IDF} برنده‌ست (\lr{0.8551} اوج)، نه \lr{CountVectorizer} (\lr{0.8501}). \lr{Hybrid} در عمل نسخه تقویت‌شده \lr{TF-IDF} با char union هست.
 
-\lr{Word2Vec} هم با اینکه دوم شد، به خاطر میانگین‌گیری بخشی از اطلاعات ترتیب و وزن کلمات رو از دست میده. \lr{70,000} تا نظر هم برای آموزش یه مدل \lr{Word2Vec} قوی از صفر زیاد نیست.
-
-پس \lr{CountVectorizer} رو به عنوان \lr{vectorizer} فاز بعدی انتخاب کردیم.
+پس برای فاز \lr{Stacking}، \lr{Hybrid} ذخیره شد (\lr{best\_vectorizer.json}).
 
 
-\section{فاز پنجم: پیاده‌سازی \lr{Stacking}}
+\section{فاز پنجم: \lr{Stacking}}
 
 \subsection{طراحی}
 
-\lr{Stacking} ایده‌اش اینه که به جای اینکه به یه مدل اعتماد کنیم، چند تا مدل رو آموزش میدیم و بعد یه مدل دیگه (متا-مدل) یاد می‌گیره چطور خروجی‌های اون‌ها رو با هم ترکیب کنه. اگه مدل‌ها روی نوع‌های مختلفی از خطا ضعف داشته باشن، متا-مدل می‌تونه این ضعف‌ها رو جبران کنه.
-
-مدل‌های پایه‌ای که انتخاب کردیم اینان: \lr{ComplementNB}، \lr{SVM (Linear)}، \lr{Random Forest}، \lr{Decision Tree} و \lr{AdaBoost}. متا-مدل هم \lr{Logistic Regression} با \lr{C=1.0} هستش. از \lr{cv=5} استفاده کردیم که متا-مدل روی پیش‌بینی‌های خارج از تا آموزش ببینه و از نشت داده جلوگیری بشه.
-
-یه نکته فنی که باید بهش دقت کرد اینه که \lr{LinearSVC} به طور پیش‌فرض \lr{predict\_proba} نداره ولی \lr{StackingClassifier} بهش نیاز داره. به خاطر همین \lr{LinearSVC} رو داخل \lr{CalibratedClassifierCV} گذاشتیم تا احتمالات کالیبره‌شده تولید کنه.
+چهار پایه روی \lr{Hybrid} sparse: \lr{ComplementNB}، \lr{SVM} کالیبره، \lr{LogisticRegression}، \lr{RandomForest} (\lr{n\_estimators=300}). \lr{meta-learner}: \lr{LogisticRegression}، \lr{cv=5}، \lr{stack\_method=auto}. زمان آموزش حدود \lr{683} ثانیه (\lr{11.4} دقیقه).
 
 \subsection{نتایج}
 
@@ -454,68 +467,139 @@
 \toprule
 \textbf{مدل} & \textbf{دقت} & \textbf{صحت} & \textbf{فراخوانی} & \textbf{\lr{F1}} \\
 \midrule
-\lr{Stacking Ensemble}           & \lr{0.8455} & \lr{0.8474} & \lr{0.8455} & \lr{0.8453} \\
-\lr{Random Forest} (بهترین تکی) & \lr{0.8386} & \lr{0.8404} & \lr{0.8386} & \lr{0.8384} \\
+\lr{Stacking} (\lr{Hybrid}) & \lr{0.8580} & \lr{0.8601} & \lr{0.8580} & \lr{0.8578} \\
+\lr{SVM (tuned)} (تکی) & \lr{0.8578} & \lr{0.8620} & \lr{0.8578} & \lr{0.8574} \\
 \bottomrule
 \end{tabular}
-\caption{مقایسه \lr{Stacking} با بهترین مدل منفرد}
+\caption{\lr{Stacking} در برابر بهترین تکی}
 \label{tab:stacking_results}
 \end{table}
+
+بهبود \lr{F1}: \lr{+0.0004} (\lr{0.04} نقطه درصد). کم ولی مثبت.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.65\textwidth]{../outputs/figures/stacking_vs_best.png}
-    \caption{مقایسه عملکرد \lr{Stacking} در برابر بهترین مدل منفرد}
+    \caption{مقایسه \lr{Stacking} و بهترین تکی}
     \label{fig:stacking_vs_best}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.55\textwidth]{../outputs/confusion_matrices/Stacking_CountVectorizer.png}
-    \caption{ماتریس درهم‌ریختگی مدل \lr{Stacking} نهایی}
+    \includegraphics[width=0.55\textwidth]{../outputs/confusion_matrices/Stacking_Hybrid.png}
+    \caption{ماتریس درهم‌ریختگی \lr{Stacking + Hybrid}}
     \label{fig:stacking_cm}
 \end{figure}
 
 \subsection{تحلیل}
 
-\lr{Stacking} با \lr{F1} برابر \lr{0.8453} نسبت به بهترین مدل منفرد با \lr{F1} برابر \lr{0.8384}، یه بهبود \lr{0.69\%} داشت. بهبود هست ولی خیلی بزرگ نیست. چرا؟ چند دلیل داره.
+\lr{Stacking} کمی بهتر از \lr{SVM tuned} شد. بهبود کوچیکه چون پایه‌ها روی یه ماتریس مشترک آموزش دیدن و \lr{SVM} خودش از قبل خیلی قوی بود. ولی \lr{meta-learner} یاد گرفته کی به کدوم پایه اعتماد کنه.
 
-اول اینکه \lr{Random Forest} خودش یه روش انسمبل هستش و از قبل خیلی از ضعف‌های مدل‌های ساده رو جبران کرده. دوم اینکه همه مدل‌های پایه روی یه فضای ویژگی مشترک آموزش دیدن، یعنی احتمالاً روی نوع‌های مشابهی از نمونه‌ها اشتباه می‌کنن و تنوع کافی ندارن. \lr{Stacking} وقتی بیشتر جواب میده که مدل‌ها روی نقاط قوت مختلف داشته باشن.
-
-ولی خب، \lr{Stacking} بهتر شده. متا-مدل یاد گرفته در چه مواردی به کدوم مدل پایه بیشتر اعتماد کنه.
-
-\subsection{نمونه‌هایی از پیش‌بینی‌های درست و اشتباه مدل نهایی}
+\subsection{نمونه‌های خطا و سقف دقت}
 
 \begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{X c c}
 \toprule
-\textbf{متن (پس از پیش‌پردازش)} & \textbf{واقعی} & \textbf{پیش‌بینی} \\
+\textbf{متن} & \textbf{برچسب} & \textbf{پیش‌بینی} \\
 \midrule
-کیفیت بالا بسته‌بندی عالی سرعت ارسال خوب & مثبت & مثبت \lr{\ding{51}} \\
-غذا سرد رسید اصلاً تازه نبود ناراضی & منفی & منفی \lr{\ding{51}} \\
-کمی دیر رسید ولی خوشمزه بود & مثبت & منفی \lr{\ding{55}} \\
-نه خوب نه بد معمولی & منفی & مثبت \lr{\ding{55}} \\
+کیفیت خوب بود ولی نسبت به قیمت حجم غذا خوب بود & \lr{SAD} & \lr{HAPPY} \\
+هسته زردآلو خیلی بد بود ولی برگه هلو خوب بود & \lr{SAD} & \lr{HAPPY} \\
+آدرس اشتباه فرستاد ولی خود همبرگر خوب بود & \lr{SAD} & \lr{HAPPY} \\
+از نظر مزه خوشمزه بود ولی حجم کم بود & \lr{SAD} & \lr{HAPPY} \\
+سالاد سزار کاهو موند؛ سیب‌زمینی خوب بود & \lr{HAPPY} & \lr{SAD} \\
+چیپس پنیر بدون سس تند سفارش دادم ولی تند فرستادید & \lr{HAPPY} & \lr{SAD} \\
 \bottomrule
 \end{tabularx}
-\caption{نمونه‌هایی از پیش‌بینی‌های درست و اشتباه مدل \lr{Stacking}}
+\caption{خطاهای واقعی \lr{Stacking}}
 \label{tab:stacking_examples}
 \end{table}
 
-پس در نهایت \lr{Stacking} یه قدم جلوتره، ولی نه یه جهش بزرگ.
+حدود \lr{1,970} خطا از \lr{13,896} تست (\lr{85.8\%} دقت). خیلیاشون نظر مختلط یا برچسب مشکوک‌ان، نه خطای تصادفی مدل. «کیفیت عالی. اما غذا سرد شده بود» (\lr{HAPPY}) یا «خوشمزه بود ولی فوق العاده سرد» (\lr{SAD}) نمونه‌ان که انسان هم مردد میشه.
+
+پس \lr{F1} حدود \lr{0.86} هم موفقیت pipeline کلاسیکه هم یادآوری که داده \lr{100\%} درست  نیست.
+
+
+\section{فاز ششم (bonus): \lr{ParsBERT}}
+
+بعد از اینکه \lr{Stacking Hybrid} به \lr{F1=0.8578} رسید، سقف مدل‌های کلاسیک روی \lr{bag-of-words} مشخص شد. فاز ۶ رفته سراغ \lr{transformer} فارسی تا ببینیم context و fine-tuning چقدر می‌تونه از این سقف بالاتر بره. همه نتایج این بخش از نوت‌بوک \lr{06\_parsbert.ipynb} روی \lr{Kaggle GPU} اومده.
+
+\subsection{\lr{ParsBERT} چیه و چرا اصلاً امتحانش کردیم؟}
+
+\lr{ParsBERT}\footnote{\lr{BERT} (\lr{Bidirectional Encoder Representations from Transformers}): مدل زبانی \lr{Transformer} دوطرفه. \lr{ParsBERT} نسخه فارسی‌ش هست که روی متن فارسی \lr{pretrain} شده.} یه \lr{language model} مبتنی بر \lr{Transformer} هست که روی حجم زیادی متن فارسی \lr{pretrain} شده. برخلاف \lr{CountVectorizer}/\lr{TF-IDF} که هر کلمه رو جدا می‌بینه، \lr{ParsBERT} جمله رو \textbf{دوطرفه} می‌خونه: معنی «خوب» وقتی قبلش «نه» یا «ولی» باشه با حالت ساده فرق می‌کنه. برای نظرات \lr{Snapfood} که پر از «خوب بود ولی...» هستن، همین تفاوت مهمه.
+
+مدلی که استفاده کردیم \lr{HooshvareLab/bert-base-parsbert-uncased} هست — \lr{12} لایه \lr{Transformer}، hidden size \lr{768}، tokenizer خودش (\lr{WordPiece}). توی پیاده‌سازی ما (\lr{src/bert\_features.py}) embeddingها \textbf{روی متن خام} \lr{comment} ساخته میشن، نه روی خروجی پیش‌پردازش فاز ۱. دلیلش اینه که \lr{ParsBERT} با فارسی طبیعی \lr{pretrain} شده؛ مارکرهای \lr{NEG\_}/\lr{EMO\_} و پاکسازی سنگین فاز ۱ برای \lr{BERT} لزوماً کمک نمی‌کنه و گاهی گیجش می‌کنه.
+
+\subsection{پیاده‌سازی و محیط اجرا}
+نوت‌بوک روی \lr{Kaggle} اجرا شد. featureهای frozen از قبل کش شده بودن (\lr{X\_train\_bert.npy}، \lr{X\_test\_bert.npy} — هر کدوم \lr{768} بعد برای \lr{55,583} train و \lr{13,896} test). استخراج feature با \lr{ParsBertFeatureExtractor}: \lr{max\_length=128}، \lr{batch\_size=32}، \lr{pooling=mean} روی hidden stateهای واقعی (نه فقط \lr{[CLS]} خام)، چون برای frozen extraction معمولاً mean بهتر جواب میده.
+
+سه مسیر جدا تست کردیم:
+\textbf{مسیر ۱ — Frozen \lr{ParsBERT} + سرهای کلاسیک.} وزن‌های \lr{Transformer} ثابت موندن؛ فقط classifierهای \lr{sklearn} روی بردار \lr{768}-بعدی آموزش دیدن: \lr{SVM (Linear)} کالیبره، \lr{LogisticRegression}، \lr{HistGradientBoosting}. بعد همون سه تا رو با \lr{StackingClassifier} (\lr{meta-learner} = \lr{LogisticRegression}، \lr{cv=5}) ترکیب کردیم. آموزش stacking روی dense \lr{768}-بعدی حدود \lr{3633} ثانیه (\lr{60} دقیقه) طول کشید.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{مدل (frozen)} & \textbf{\lr{F1}} & \textbf{دقت} \\
+\midrule
+\lr{SVM (Linear)} & \lr{0.8445} & \lr{0.8447} \\
+\lr{LogisticRegression} & \lr{0.8438} & \lr{0.8440} \\
+\lr{HistGradientBoosting} & \lr{0.8357} & \lr{0.8361} \\
+\lr{Stacking} & \lr{0.8450} & \lr{0.8452} \\
+\bottomrule
+\end{tabular}
+\caption{نتایج frozen \lr{ParsBERT} + مدل‌های کلاسیک}
+\label{tab:parsbert_frozen}
+\end{table}
+
+هیچکدوم از اینا از \lr{Stacking Hybrid} فاز ۵ (\lr{0.8578}) بالاتر نرفت. یعنی embedding از پیش آموزش‌دیده \textbf{به تنهایی} برای این دیتاست کافی نبود — حتی با stacking.
+
+\textbf{مسیر ۲ — Fine-tune end-to-end.} اینجا کل \lr{ParsBERT} روی برچسب‌های \lr{Snappfood} fine-tune شد (\lr{BertForSequenceClassification}، \lr{num\_labels=2}). train به \lr{90\%} (\lr{50,024} نمونه) و \lr{10\%} (\lr{5,559} نمونه) برای validation داخل train شکستیم (\lr{random\_state=42}). hyperparameterها: \lr{3} epoch، \lr{batch\_size=32}، \lr{learning\_rate=2e-5}، \lr{weight\_decay=0.01}، \lr{fp16=True}، \lr{max\_length=128}. بهترین checkpoint با \lr{load\_best\_model\_at\_end} انتخاب شد.
+
+نتیجه روی test: \lr{F1=0.8730}، دقت \lr{0.8731} — یعنی \lr{+0.0152} نسبت به \lr{Stacking Hybrid}. این اولین مدلی بود که مستقیم متن خام می‌خوند و از سقف کلاسیک عبور کرد.
+
+\textbf{مسیر ۳ — Extended meta-ensemble.} پنج عضو قوی رو روی \lr{10\%} blend از train fit کردیم و probability خروجی‌شون رو به \lr{meta-learner} (\lr{LogisticRegression}، بهترین \lr{C=0.3}) دادیم: \lr{SVM} و \lr{LogReg} روی \lr{Hybrid}، \lr{HistGradientBoosting} روی frozen \lr{ParsBERT}، \lr{ComplementNB} روی word \lr{TF-IDF}، و fine-tuned \lr{ParsBERT}. \lr{meta-learner} روی blend \lr{10} بعدی probability (\lr{5} عضو در \lr{2} کلاس) آموزش دید. نتیجه test: \lr{F1=0.8713} — کمی پایین‌تر از fine-tune تنها (\lr{0.8730})، ولی هنوز خیلی بالاتر از pipeline کلاسیک. coefficientهای \lr{meta-learner} نشون میدن وزن اصلی روی fine-tuned \lr{ParsBERT} افتاده؛ اعضای کلاسیک بعد از اضافه شدن \lr{transformer} فاین‌تیون‌شده نقش کمتری دارن.
+
+\subsection{مقایسه با baseline کلاسیک}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{مرحله} & \textbf{\lr{F1}} & \textbf{نسبت به \lr{Stacking Hybrid}} \\
+\midrule
+\lr{Stacking Hybrid} (\lr{baseline}) & \lr{0.8578} & \lr{0} \\
+\lr{ParsBERT frozen — stacking} & \lr{0.8450} & \lr{-0.0128} \\
+\lr{ParsBERT fine-tuned} & \lr{0.8730} & \lr{+0.0152} \\
+\lr{Extended ensemble} & \lr{0.8713} & \lr{+0.0135} \\
+\bottomrule
+\end{tabular}
+\caption{خلاصه bonus در برابر \lr{baseline}}
+\label{tab:parsbert}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{../outputs/figures/parsbert_vs_classical.png}
+    \caption{مقایسه \lr{ParsBERT} و pipeline کلاسیک}
+    \label{fig:parsbert}
+\end{figure}
+
+\subsection{جمع‌بندی فاز ۶}
+
+خوبیش چیه؟ fine-tune واقعاً سقف رو شکوند (\lr{+1.5} نقطه \lr{F1}). بدیش چیه؟ نیاز به \lr{GPU}، زمان آموزش بیشتر، و وابستگی به \lr{HuggingFace}/\lr{transformers}. frozen \lr{ParsBERT} حتی با stacking از \lr{Hybrid} ضعیف‌تر بود — پس «داشتن \lr{BERT}» به تنهایی کافی نیست؛ باید روی همین دامنه و همین برچسب‌ها fine-tune بشه.
+
+پس در نهایت: برای عبور از سقف \lr{bag-of-words}، context لازمه؛ frozen کافی نیست، fine-tune لازمه. فاز ۶ bonus بود و deliverable اصلی پروژه همچنان فازهای ۱–۵ با مدل‌های کلاسیکه.
 
 
 \section{نتیجه‌گیری}
 
-خب  خلاصه بگیم چی شد. یه پایپ‌لاین کامل برای تحلیل احساسات فارسی درست کردیم روی \lr{70,000} تا نظر \lr{Snapfood}.
+یه pipeline کامل روی \lr{69,479} نظر \lr{Snapfood}: پیش‌پردازش احساس‌محور (نفی، \lr{emoji})، پنج \lr{vectorizer}، \lr{32+} آزمایش مدل، انتخاب \lr{Hybrid}، \lr{Stacking} با \lr{F1=0.8578}.
 
-از نظر پیش‌پردازش، مهم‌ترین چیزی که یاد گرفتیم اینه که باید \lr{URL}ها رو \textbf{قبل} از نرمالیزاسیون \lr{Hazm} حذف کنیم، و اینکه لیست پیش‌فرض کلمات بی‌معنی \lr{Hazm} شامل کلمات احساسی مهمیه که نباید حذف بشن.
+نکات کلیدی: \lr{URL} قبل از \lr{Hazm}؛ \lr{stopword} احساسی حذف نشه؛ \lr{Hybrid} برنده sparse؛ \lr{SVM tuned} قوی‌تر از درخت‌ها؛ \lr{Stacking} بهبود کوچک ولی مثبت؛ خطاها اغلب نظر مختلط/برچسب نویزی؛ \lr{ParsBERT} فاین‌تیون‌شده به \lr{0.8730} رسید.
 
-از نظر \lr{vectorization}، \lr{CountVectorizer} بهترین نتیجه رو داد که کمی غیرمنتظره بود ولی احتمالاً به خاطر اینه که \lr{lemmatization} قبلاً بخشی از کار \lr{TF-IDF} رو انجام داده.
-
-از نظر مدل‌سازی، \lr{Random Forest} با \lr{F1 = 0.8384} بهترین مدل منفرد شد. و \lr{Stacking} با ترکیب پنج مدل این عدد رو به \lr{0.8453} رساند، یعنی بهبود \lr{0.69\%} داشت.
-
-اگه بخوایم ادامه بدیم، احتمالاً استفاده از \lr{BERT}\footnote{\lr{BERT} (\lr{Bidirectional Encoder Representations from Transformers}): مدل زبانی بزرگ مبتنی بر \lr{Transformer} که زمینه دوطرفه جمله رو درک میکنه. \lr{ParsBERT} نسخه فارسی‌شده‌اش هستش که روی متون فارسی از پیش آموزش دیده.} فارسی مثل \lr{ParsBERT} بهبود خیلی بیشتری میده چون ترتیب کلمات و زمینه جمله رو می‌فهمه، ولی خب اون دیگه کلاسیک نیست.
+تحویل اجباری پروژه با فازهای ۱–۵ کامله؛ فاز ۶ bonus و بهبود واقعی با \lr{transformer} فاین‌تیون‌شده بود.
 
 \end{document}
