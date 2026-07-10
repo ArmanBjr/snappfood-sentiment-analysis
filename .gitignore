@@ -2,6 +2,7 @@
 saved_models/
 models/
 outputs/parsbert_finetune/
+outputs/v2_parsbert/*.pth
 
 # Jupyter checkpoints
 .ipynb_checkpoints/

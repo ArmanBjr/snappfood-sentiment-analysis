@@ -594,12 +594,84 @@
 پس در نهایت: برای عبور از سقف \lr{bag-of-words}، context لازمه؛ frozen کافی نیست، fine-tune لازمه. فاز ۶ bonus بود و deliverable اصلی پروژه همچنان فازهای ۱–۵ با مدل‌های کلاسیکه.
 
 
+\section{فاز v2 (\lr{06\_v2}): \lr{Snappfood-BERT} end-to-end}
+
+بعد از فاز ۶ رفتیم سراغ یه مسیر جدا توی نوت‌بوک \lr{06\_v2.ipynb} — نه \lr{frozen feature}، نه \lr{ParsBERT} عمومی؛ اینجا مستقیم از \lr{HooshvareLab/bert-fa-base-uncased-sentiment-snappfood} استفاده کردیم. انگار همون \lr{BERT} فارسیه، ولی از قبل روی نظرات \lr{Snappfood} برای sentiment آموزش دیده؛ یعنی از اول closer به همین دامنه‌ست.
+
+\subsection{چی کار کردیم؟}
+
+اول \lr{70,000} ردیف اول \lr{CSV} خام رو گرفتیم (نه split فاز ۱). \lr{Hazm} normalize، \lr{HAPPY/SAD} به \lr{0/1}، فیلتر طول با \lr{IQR}، regex cleaning، dedup — \lr{51} نظر تکراری حذف شد و \lr{65,973} نمونه موند. split اینجا \lr{50\%}/\lr{20\%}/\lr{30\%} train/val/test با \lr{random\_state=42} بود: \lr{32,986} train، \lr{13,194} val، \lr{19,793} test. پس از نظر protocol با فازهای ۳–۵ فرق داره — اونا \lr{80/20} و preprocessing احساس‌محور فاز ۱ رو داشتن.
+
+روی checkpoint بالا \lr{CustomParsBERT} ساختیم: \lr{BERT pooler} $\rightarrow$ \lr{dropout=0.3} $\rightarrow$ \lr{Linear} classifier، به علاوه \lr{L2=0.01} روی وزن‌های classifier. آموزش manual با \lr{PyTorch} بود — \lr{AdamW}، \lr{lr=1e-6}، \lr{batch=8}، \lr{6} epoch. روی \lr{RTX 4070 Laptop} هر epoch حدود \lr{11} دقیقه طول کشید (جمعاً نزدیک \lr{66} دقیقه training).
+
+\subsection{نتایج}
+
+بهترین validation accuracy توی epoch \lr{3} بود: \lr{0.9296}. epoch \lr{6} هم \lr{0.9288} موند — یعنی overfit سنگین ندیدیم.
+
+روی test (\lr{19,793} نمونه):
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{معیار} & \textbf{مقدار} & \textbf{توضیح} \\
+\midrule
+دقت (\lr{Accuracy}) & \lr{0.9273} & \\
+صحت (\lr{Precision}) weighted & \lr{0.9280} & \\
+فراخوانی (\lr{Recall}) weighted & \lr{0.9273} & \\
+\lr{F1} weighted & \lr{0.9274} & بهترین خروجی این pipeline \\
+\lr{F1} کلاس منفی & \lr{0.9272} & \lr{9690} نمونه \\
+\lr{F1} کلاس مثبت & \lr{0.9275} & \lr{10103} نمونه \\
+\bottomrule
+\end{tabular}
+\caption{نتایج test — \lr{06\_v2}}
+\label{tab:v2_results}
+\end{table}
+
+حدود \lr{1438} نظر (~\lr{7.3\%}) اشتباه classify شدن — همون الگوی فازهای قبل: نظر مختلط «خوب بود ولی...» که یه برچسب \lr{HAPPY/SAD} براش سخت‌ه.
+
+خوبیش چیه؟ \lr{F1} رسید \lr{0.9274} — خیلی بالاتر از stacking کلاسیک (\lr{0.8578}) و حتی fine-tune \lr{ParsBERT} عمومی (\lr{0.8730}). بدیش چیه؟ split و preprocessing با pipeline اصلی یکی نیست، پس عدد \lr{0.927} رو نمیشه مستقیم با \lr{0.858} یا \lr{0.873} مقایسه کرد؛ ولی جهت improvement واضحه: domain checkpoint + end-to-end fine-tune + head regularized.
+
+وزن‌ها توی \lr{outputs/v2\_parsbert/final\_model.pth} ذخیره شد.
+
+
+\section{مقایسه بهترین مدل هر فاز}
+
+اینجا یه نگاه کلی به trajectory پروژه — از preprocessing تا \lr{transformer} domain-specific. فازهای ۱ و ۲ مدل classifier ندارن؛ پایه pipeline هستن.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lllc}
+\toprule
+\textbf{فاز} & \textbf{نوت‌بوک} & \textbf{بهترین setup} & \textbf{\lr{F1}} \\
+\midrule
+۱ & \lr{01\_preprocessing} & پیش‌پردازش احساس‌محور & — \\
+۲ & \lr{02\_vectorization} & \lr{5} vectorizer (شامل \lr{Hybrid}) & — \\
+۳ & \lr{03\_base\_models} & \lr{SVM (Linear) tuned + Hybrid} & \lr{0.8574} \\
+۴ & \lr{04\_vectorizer\_selection} & انتخاب \lr{Hybrid} (همون \lr{SVM tuned}) & \lr{0.8574} \\
+۵ & \lr{05\_stacking} & \lr{Stacking + Hybrid} & \lr{0.8578} \\
+۶ & \lr{06\_parsbert} & \lr{ParsBERT fine-tuned} (متن خام) & \lr{0.8730} \\
+v2 & \lr{06\_v2} & \lr{Snappfood-BERT + CustomParsBERT} & \lr{0.9274} \\
+\bottomrule
+\end{tabular}
+\caption{بهترین \lr{F1} هر فاز (جایی که classifier داشتیم)}
+\label{tab:phase_comparison}
+\end{table}
+
+حالا خوبیش چیه؟ trajectory واضحه: مدل‌های کلاسیک روی \lr{bag-of-words} سقفشون ~\lr{0.86} \lr{F1} بود. \lr{Stacking} فقط \lr{+0.0004} داد نسبت به بهترین single — یعنی ensemble کلاسیک incremental بود، نه breakthrough. \lr{ParsBERT} frozen حتی از \lr{Hybrid} ضعیف‌تر بود (\lr{0.8450})؛ پس داشتن \lr{BERT} به تنهایی کافی نیست. fine-tune end-to-end اولین جهش بود (\lr{0.8730}، \lr{+0.0152} نسبت به stacking). v2 با checkpoint مخصوص \lr{Snappfood} رفت بالاتر (\lr{0.9274}) — ولی یادت باشه split \lr{50/20/30} و subset \lr{70k} داره، پس delta دقیق نیست.
+
+بدیش چیه؟ protocol یکسان نیست بین فاز ۶ و v2: preprocessing، split، حتی مدل پایه فرق می‌کنه. برای deliverable درسی، فازهای ۱–۵ + فاز ۶ (\lr{06\_parsbert}) روی همون split پروژه authoritative‌ترن؛ v2 نشون میده اگه domain checkpoint داشته باشی و end-to-end fine-tune کنی، سقف عملی خیلی بالاتر میره.
+
+پس در نهایت: classical pipeline کامل و reproducible روی split پروژه \lr{F1=0.8578}؛ \lr{transformer} generic \lr{0.8730}؛ \lr{Snappfood-BERT} v2 \lr{0.9274} روی protocol خودش — سه لایه answer بسته به اینکه چقدر resource و domain specificity داری.
+
+
 \section{نتیجه‌گیری}
 
 یه pipeline کامل روی \lr{69,479} نظر \lr{Snapfood}: پیش‌پردازش احساس‌محور (نفی، \lr{emoji})، پنج \lr{vectorizer}، \lr{32+} آزمایش مدل، انتخاب \lr{Hybrid}، \lr{Stacking} با \lr{F1=0.8578}.
 
-نکات کلیدی: \lr{URL} قبل از \lr{Hazm}؛ \lr{stopword} احساسی حذف نشه؛ \lr{Hybrid} برنده sparse؛ \lr{SVM tuned} قوی‌تر از درخت‌ها؛ \lr{Stacking} بهبود کوچک ولی مثبت؛ خطاها اغلب نظر مختلط/برچسب نویزی؛ \lr{ParsBERT} فاین‌تیون‌شده به \lr{0.8730} رسید.
+نکات کلیدی: \lr{URL} قبل از \lr{Hazm}؛ \lr{stopword} احساسی حذف نشه؛ \lr{Hybrid} برنده sparse؛ \lr{SVM tuned} قوی‌تر از درخت‌ها؛ \lr{Stacking} بهبود کوچک ولی مثبت؛ خطاها اغلب نظر مختلط/برچسب نویزی؛ \lr{ParsBERT} فاین‌تیون‌شده به \lr{0.8730} رسید؛ مسیر v2 (\lr{06\_v2}) با \lr{Snappfood-BERT} و \lr{CustomParsBERT} روی test به \lr{F1=0.9274} رسید (split \lr{50/20/30}، subset \lr{70k}).
 
-تحویل اجباری پروژه با فازهای ۱–۵ کامله؛ فاز ۶ bonus و بهبود واقعی با \lr{transformer} فاین‌تیون‌شده بود.
+تحویل اجباری پروژه با فازهای ۱–۵ کامله؛ فاز ۶ bonus و بهبود واقعی با \lr{transformer} فاین‌تیون‌شده بود؛ v2 همون ایده رو با checkpoint domain-specific و training loop دستی ادامه داد.
 
 \end{document}
