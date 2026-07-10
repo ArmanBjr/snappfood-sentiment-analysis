@@ -1,23 +1,36 @@
 """
-Custom sklearn-compatible vectorizer for Word2Vec document embeddings.
+Custom sklearn-compatible vectorizers for the experiment loop.
 
-Why a custom transformer?
+Why custom transformers?
   gensim's Word2Vec model is not a sklearn transformer, so it cannot be used
-  directly inside pipelines or the experiment loop. MeanWord2VecVectorizer
-  wraps it to expose fit() / transform() so it behaves like CountVectorizer
-  or TfidfVectorizer in the experiment code.
+  directly inside pipelines or the experiment loop. The wrappers here expose
+  fit() / transform() so a Word2Vec model behaves like CountVectorizer or
+  TfidfVectorizer in the experiment code.
 
-Document vector strategy: simple mean of word vectors.
-  For each document, collect vectors of all tokens that exist in the W2V
-  vocabulary, then average them. Tokens not in the vocabulary are skipped.
-  Documents where no token is in-vocabulary get a zero vector.
+Three document-vector strategies live here:
 
-  Simple mean works well for sentiment because emotional signal is spread
-  across the whole review, not concentrated in a few rare words.
+  * MeanWord2VecVectorizer      — plain mean of in-vocab word vectors.
+  * TfidfWeightedWord2Vec       — IDF-weighted mean. Rare, informative words
+                                  (the ones that actually carry sentiment) get
+                                  more weight than frequent filler words.
+                                  Consistently beats plain mean pooling on
+                                  short-review sentiment (Arora SIF, and the
+                                  classic "weighted bag-of-vectors" result).
+
+And one helper for the sparse side:
+
+  * build_word_char_union()     — a FeatureUnion of a word-level TF-IDF and a
+                                  character n-gram TF-IDF. Char n-grams are
+                                  robust to the heavy spelling variation and
+                                  informal morphology of Persian food-delivery
+                                  reviews and reliably lift classical SVM by a
+                                  few points over words alone.
 """
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import FeatureUnion
 
 
 class MeanWord2VecVectorizer(BaseEstimator, TransformerMixin):
@@ -75,6 +88,126 @@ class MeanWord2VecVectorizer(BaseEstimator, TransformerMixin):
     def get_feature_names_out(self):
         # Satisfies the sklearn transformer interface for pipelines
         return np.array([f'w2v_dim_{i}' for i in range(self.vector_size)])
+
+
+class TfidfWeightedWord2Vec(BaseEstimator, TransformerMixin):
+    """
+    Transform pre-cleaned text into document vectors by an IDF-weighted mean
+    of the Word2Vec vectors of in-vocabulary tokens.
+
+    Each token's contribution is scaled by its inverse-document-frequency, so
+    a rare sentiment word (افتضاح, عالی) dominates the document vector while a
+    high-frequency filler word barely moves it. This is the cheap, strong
+    cousin of Arora's SIF and beats plain mean pooling on short reviews.
+
+    Unlike MeanWord2VecVectorizer, this transformer HAS state: it must learn
+    the IDF table from the training corpus in fit(), so always fit on TRAIN
+    only and transform train/test separately to avoid leakage.
+
+    Parameters
+    ----------
+    model        : trained gensim Word2Vec model (model.wv gives KeyedVectors)
+    vector_size  : dimensionality of the word vectors (must match model)
+    default_idf  : 'max' gives OOV-but-known tokens the largest seen IDF;
+                   any float overrides with a fixed fallback weight.
+
+    Usage
+    -----
+    >>> vec = TfidfWeightedWord2Vec(model=w2v, vector_size=100)
+    >>> Xtr = vec.fit_transform(X_train_clean)   # learns IDF from train
+    >>> Xte = vec.transform(X_test_clean)        # reuses train IDF
+    """
+
+    def __init__(self, model, vector_size: int = 100, default_idf='max'):
+        self.model = model
+        self.vector_size = vector_size
+        self.default_idf = default_idf
+
+    def fit(self, X, y=None):
+        # Learn IDF over the same tokenization the documents already use
+        # (whitespace split — text arrives pre-tokenized from preprocessing).
+        tfidf = TfidfVectorizer(
+            analyzer=str.split,
+            lowercase=False,
+            token_pattern=None,
+        )
+        tfidf.fit(X if isinstance(X, (list, tuple)) else list(X))
+        self.idf_ = dict(zip(tfidf.get_feature_names_out(), tfidf.idf_))
+        self._fallback_idf_ = (
+            max(tfidf.idf_) if self.default_idf == 'max' else float(self.default_idf)
+        )
+        return self
+
+    def transform(self, X) -> np.ndarray:
+        result = np.zeros((len(X), self.vector_size), dtype=np.float32)
+        wv = self.model.wv
+
+        for i, text in enumerate(X):
+            tokens = text.split() if isinstance(text, str) else []
+            acc = np.zeros(self.vector_size, dtype=np.float32)
+            weight_sum = 0.0
+            for token in tokens:
+                if token not in wv:
+                    continue
+                w = self.idf_.get(token, self._fallback_idf_)
+                acc += w * wv[token]
+                weight_sum += w
+            if weight_sum > 0.0:
+                result[i] = acc / weight_sum
+            # else: row stays zero (no in-vocab tokens)
+
+        return result
+
+    def get_feature_names_out(self):
+        return np.array([f'w2v_idf_dim_{i}' for i in range(self.vector_size)])
+
+
+def build_word_char_union(
+    *,
+    word_ngram_range=(1, 2),
+    char_ngram_range=(3, 5),
+    word_max_features: int = 50000,
+    char_max_features: int = 50000,
+    min_df: int = 2,
+    sublinear_tf: bool = True,
+) -> FeatureUnion:
+    """
+    Build a FeatureUnion that concatenates a word-level TF-IDF and a
+    character n-gram TF-IDF into one sparse feature matrix.
+
+    Character n-grams ('char_wb' = word-boundary-aware) catch informal Persian
+    spelling, elongation, attached negation morphemes, and typos that the
+    word vectorizer misses entirely. Stacking word + char features is a
+    well-worn, low-risk way to lift a classical SVM a few points on noisy,
+    short, user-generated text — and it keeps the required word-level
+    representation intact as one half of the union.
+
+    The result plugs into the experiment loop exactly like any other
+    vectorizer: it exposes fit / transform / fit_transform and produces a
+    scipy sparse matrix.
+
+    Returns
+    -------
+    sklearn.pipeline.FeatureUnion
+    """
+    word_tfidf = TfidfVectorizer(
+        analyzer='word',
+        ngram_range=word_ngram_range,
+        max_features=word_max_features,
+        min_df=min_df,
+        sublinear_tf=sublinear_tf,
+    )
+    char_tfidf = TfidfVectorizer(
+        analyzer='char_wb',
+        ngram_range=char_ngram_range,
+        max_features=char_max_features,
+        min_df=min_df,
+        sublinear_tf=sublinear_tf,
+    )
+    return FeatureUnion([
+        ('word', word_tfidf),
+        ('char', char_tfidf),
+    ])
 
 
 def oov_rate(texts, model) -> float:

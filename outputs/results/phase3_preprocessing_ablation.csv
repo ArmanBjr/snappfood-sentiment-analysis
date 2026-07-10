@@ -1,0 +1,4 @@
+variant,model,vectorizer,accuracy,precision,recall,f1,clean_time_s
+A - current,LogReg (A - current),Hybrid-ablation,0.8516,0.8558,0.8516,0.8512,3.5
+B - no-lemma,LogReg (B - no-lemma),Hybrid-ablation,0.8576,0.8625,0.8576,0.8572,3.3
+C - light,LogReg (C - light),Hybrid-ablation,0.8544,0.859,0.8544,0.854,3.2

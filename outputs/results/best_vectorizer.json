@@ -1,11 +1,20 @@
 {
-  "best_vectorizer": "CountVectorizer",
-  "best_model": "RandomForest",
-  "best_model_f1": 0.8384,
-  "best_model_accuracy": 0.8386,
+  "best_vectorizer": "Hybrid",
+  "best_model": "SVM (Linear) (tuned)",
+  "best_model_f1": 0.8574,
+  "best_model_accuracy": 0.8578,
+  "peak_f1_per_vec": {
+    "Hybrid": 0.8574,
+    "TF-IDF": 0.8551,
+    "CountVectorizer": 0.8501,
+    "Word2Vec": 0.8394,
+    "Word2Vec-IDF": 0.8312
+  },
   "avg_f1_per_vec": {
-    "CountVectorizer": 0.8066,
-    "Word2Vec": 0.8021,
-    "TF-IDF": 0.7946
+    "Hybrid": 0.8515,
+    "TF-IDF": 0.8251,
+    "CountVectorizer": 0.8226,
+    "Word2Vec-IDF": 0.818,
+    "Word2Vec": 0.8169
   }
 }

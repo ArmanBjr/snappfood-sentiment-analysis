@@ -1,0 +1,44 @@
+{
+  "representation": "ParsBERT-frozen",
+  "best_bert_model": "Stacking",
+  "best_bert_f1": 0.8451,
+  "best_bert_accuracy": 0.8453,
+  "all_results": [
+    {
+      "model": "SVM (Linear)",
+      "vectorizer": "ParsBERT-frozen",
+      "accuracy": 0.8447,
+      "precision": 0.8469,
+      "recall": 0.8447,
+      "f1": 0.8445,
+      "train_time_s": 51.6
+    },
+    {
+      "model": "LogisticRegression",
+      "vectorizer": "ParsBERT-frozen",
+      "accuracy": 0.844,
+      "precision": 0.8461,
+      "recall": 0.844,
+      "f1": 0.8438,
+      "train_time_s": 3.9
+    },
+    {
+      "model": "HistGradientBoosting",
+      "vectorizer": "ParsBERT-frozen",
+      "accuracy": 0.8361,
+      "precision": 0.8394,
+      "recall": 0.8361,
+      "f1": 0.8357,
+      "train_time_s": 13.2
+    },
+    {
+      "model": "Stacking",
+      "vectorizer": "ParsBERT-frozen",
+      "accuracy": 0.8453,
+      "precision": 0.8473,
+      "recall": 0.8453,
+      "f1": 0.8451,
+      "train_time_s": 1545.3
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 # Model weights (too large for git)
 saved_models/
 models/
+outputs/parsbert_finetune/
 
 # Jupyter checkpoints
 .ipynb_checkpoints/
@@ -37,3 +38,13 @@ report/*.fdb_latexmk
 Data/
 data/
 ../Data/
+
+# Local scratch / upload bundles (not for repo)
+nb_detail.txt
+nb_sec1.txt
+nb_overview.txt
+dump_cells.py
+persian-sentiment-analysis-with-parsbert.ipynb
+kaggle_upload/
+kaggle_upload.zip
+Content/
