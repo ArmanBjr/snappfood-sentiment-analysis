@@ -1,9 +1,63 @@
-# Persian Sentiment Analysis — NLP + Ensemble Learning
-## Computational Intelligence Project 3 | Ferdowsi University of Mashhad
+# Persian Sentiment Analysis — Snappfood Reviews
 
-**Students:** AmirHosein Abolfazli (4022262035) · Arman Bijari (4021262131)  
-**Professor:** Dr. Fazl-Ersi  
-**Dataset:** [Snappfood Persian Sentiment Analysis](https://www.kaggle.com/datasets/soheiltehranipour/snappfood-persian-sentiment-analysis)
+Project 3 for **Fundamentals of Computational Intelligence** at Ferdowsi University of Mashhad (FUM). Binary sentiment classification (HAPPY / SAD) on Persian Snappfood reviews using classical ML, ensemble stacking, and ParsBERT fine-tuning.
+
+> Course report: [`report/report.pdf`](report/report.pdf)
+
+**Authors:** AmirHosein Abolfazli · **Arman Bijari** — [ArmanBjr](https://github.com/ArmanBjr)  
+**Professor:** Dr. Fazl Ersi  
+**Dataset:** [Snappfood Persian Sentiment Analysis (Kaggle)](https://www.kaggle.com/datasets/soheiltehranipour/snappfood-persian-sentiment-analysis)
+
+---
+
+## Results (test set)
+
+| Phase | Best approach | F1 | Accuracy |
+|---|---|---:|---:|
+| 3 — Base models | SVM (Linear) + Hybrid vectorizer (tuned) | **0.8574** | **0.8578** |
+| 5 — Stacking | StackingClassifier + Hybrid | 0.8578 | 0.8580 |
+| 6 — ParsBERT (frozen) | Stacking on ParsBERT embeddings | 0.8451 | 0.8453 |
+| 6 — ParsBERT v2 | Fine-tuned Snappfood-BERT (`06_v2.ipynb`) | see notebook | see notebook |
+
+Classical ML + hybrid features outperformed frozen ParsBERT embeddings on this split; fine-tuned BERT is explored in `06_v2.ipynb`.
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/ArmanBjr/sentiment-analyze-snappfood.git
+cd sentiment-analyze-snappfood
+
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Place the raw CSV at `data/raw/snappfood.csv` (not committed — download from Kaggle).
+
+```bash
+jupyter lab notebooks/
+```
+
+---
+
+## Notebooks (run in order)
+
+| Phase | Notebook | Description |
+|---|---|---|
+| 1 | `01_preprocessing.ipynb` | Persian text cleaning with Hazm |
+| 2 | `02_vectorization.ipynb` | CountVectorizer, TF-IDF, Word2Vec |
+| 3 | `03_base_models.ipynb` | NB, SVM, DT, RF, KNN, AdaBoost × vectorizers |
+| 4 | `04_vectorizer_selection.ipynb` | Best vectorizer analysis (Hybrid wins) |
+| 5 | `05_stacking.ipynb` | StackingClassifier ensemble |
+| 6a | `06_parsbert.ipynb` | Frozen ParsBERT embeddings + classical heads |
+| 6b | `06_parsbert_bonus.ipynb` | ParsBERT experiments (bonus) |
+| 6c | `06_v2.ipynb` | Fine-tuned Snappfood-BERT end-to-end |
+
+A frozen course submission copy lives in `submission/notebooks/`.
 
 ---
 
@@ -11,39 +65,40 @@
 
 ```
 NLP-Ensemble/
-├── data/
-│   ├── raw/            # Original dataset CSV (place snappfood.csv here)
-│   └── processed/      # Cleaned/preprocessed data saved as CSV
-├── notebooks/
-│   ├── 01_preprocessing.ipynb       # Phase 1: text cleaning
-│   ├── 02_vectorization.ipynb       # Phase 2: CountVec, TF-IDF, Word2Vec
-│   ├── 03_base_models.ipynb         # Phase 3: 6 models × 3 vectorizers
-│   ├── 04_vectorizer_selection.ipynb # Phase 4: best vectorizer analysis
-│   └── 05_stacking.ipynb            # Phase 5: StackingClassifier
+├── notebooks/              # main workflow (phases 1–6)
+├── submission/notebooks/   # course submission snapshot
 ├── src/
-│   ├── preprocessing.py   # Persian text cleaning functions
-│   ├── vectorizers.py     # MeanWord2VecVectorizer class
-│   └── evaluation.py      # Metrics, confusion matrix helpers
-├── models/
-│   └── word2vec/          # Saved gensim Word2Vec model
+│   ├── preprocessing.py    # Persian text cleaning
+│   ├── vectorizers.py      # MeanWord2VecVectorizer, hybrid features
+│   ├── evaluation.py       # metrics and confusion matrices
+│   └── bert_features.py    # ParsBERT embedding extraction
+├── scripts/
+│   ├── predict_one.py      # single-review inference helper
+│   └── *.sh                # WSL/GPU run helpers for phase 6 v2
 ├── outputs/
-│   ├── figures/           # Plots (word clouds, distributions)
-│   ├── results/           # CSV result tables per phase
-│   └── confusion_matrices/ # Saved confusion matrix PNGs
-├── report/                # LaTeX report files
-└── README.md
+│   ├── figures/
+│   ├── results/            # CSV/JSON metrics per phase
+│   ├── confusion_matrices/
+│   └── v2_parsbert/        # v2 splits + cleaned data (weights gitignored)
+└── report/
+    └── report.pdf
 ```
 
-## Setup
+---
 
-```bash
-pip install hazm gensim scikit-learn pandas numpy matplotlib seaborn joblib
-```
+## Phases Overview
 
-## Phases
+1. **Preprocessing** — Hazm normalization, tokenization, lemmatization  
+2. **Vectorization** — CountVectorizer, TF-IDF, Word2Vec (trained from scratch), Hybrid  
+3. **Base Models** — 6 classifiers × multiple vectorizers  
+4. **Vectorizer Selection** — Hybrid vectorizer selected (peak F1 0.8574)  
+5. **Stacking** — StackingClassifier; marginal gain over best single model (+0.0004 F1)  
+6. **ParsBERT** — frozen embeddings and fine-tuned Snappfood-BERT (`06_v2.ipynb`)
 
-1. **Preprocessing** — Hazm normalization, tokenization, lemmatization
-2. **Vectorization** — CountVectorizer, TF-IDF, Word2Vec (trained from scratch)
-3. **Base Models** — NB, SVM, DT, RF, KNN, AdaBoost
-4. **Best Vectorizer** — Analysis and selection
-5. **Stacking** — StackingClassifier with best vectorizer
+---
+
+## Authors & License
+
+**AmirHosein Abolfazli** · **Arman Bijari** — [ArmanBjr](https://github.com/ArmanBjr)
+
+Released under the [MIT License](LICENSE).

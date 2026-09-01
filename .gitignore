@@ -13,7 +13,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 
-# Training logs (optional — keep CSVs, ignore raw TF logs)
+# Training logs
 outputs/logs/events.out.tfevents.*
 
 # OS
@@ -26,7 +26,7 @@ Thumbs.db
 venv/
 .venv/
 
-# LaTeX build artifacts
+# LaTeX report sources and build artifacts (PDF only in repo)
 report/*.aux
 report/*.log
 report/*.out
@@ -34,18 +34,43 @@ report/*.synctex.gz
 report/*.toc
 report/*.fls
 report/*.fdb_latexmk
+report/*.tex
+report/fonts/
+report/assets/
+report/*.txt
 
 # Data (kept outside repo)
 Data/
 data/
 ../Data/
+blood_cell_data/
 
-# Local scratch / upload bundles (not for repo)
-nb_detail.txt
-nb_sec1.txt
-nb_overview.txt
-dump_cells.py
-persian-sentiment-analysis-with-parsbert.ipynb
+# Kaggle / upload bundles / local scratch
+kaggle_output/
 kaggle_upload/
 kaggle_upload.zip
 Content/
+nb_*.txt
+nb_markdown_dump.txt
+nb_ref_dump.txt
+dump_cells.py
+persian-sentiment-analysis-with-parsbert.ipynb
+
+# Notebook generation / dump scripts (local dev only)
+scripts/dump_nb.py
+scripts/build_06_v2_notebook.py
+scripts/rewrite_report.py
+
+# One-off inference scratch outputs
+outputs/v2_parsbert/predict_one_out.txt
+outputs/v2_parsbert/predict_one_result.json
+
+# Course submission bundles (notebooks only tracked)
+submission/*.pdf
+submission/*.zip
+
+# Parent project folder (outside this repo)
+../PRESENTATION_GUIDE.*
+../PLAN.md
+../06_v2.ipynb
+../convert_guide_to_tex.py
